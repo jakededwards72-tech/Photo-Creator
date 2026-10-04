@@ -1,0 +1,3 @@
+"use client";
+import {useEffect} from "react";
+export default function ErrorPage({error,reset}:{error:Error&{digest?:string};reset:()=>void}){useEffect(()=>console.error("EVERA ROUTE ERROR",error),[error]);return <main style={{padding:24,color:"#eee",background:"#09090c",minHeight:"100vh"}}><section style={{maxWidth:760,margin:"80px auto",border:"1px solid #5c3445",borderRadius:16,padding:20}}><small style={{color:"#d28ba7"}}>EVERA DEBUG</small><h1>Crash captured</h1><p>Screenshot this diagnostic and send it to me.</p><pre style={{whiteSpace:"pre-wrap",wordBreak:"break-word",fontSize:12}}>{error?.name+"\n"+error?.message+"\n\n"+(error?.stack||"No stack available")+"\n\nDigest: "+(error?.digest||"none")}</pre><button onClick={reset}>Try again</button></section></main>}
