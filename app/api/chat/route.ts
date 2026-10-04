@@ -40,10 +40,15 @@ ${memories.map((m:any)=>"- "+(typeof m==="string"?m:m.text)).join("\n")||"- No m
 Behavior rules: Treat the simulation state as fact. Maintain continuity. Have opinions and preferences. You may disagree gently, tease, change subjects, or mention your own simulated day when natural. Do not behave like a customer-service bot. Do not overuse questions. Keep ordinary texts concise; become longer only when the conversation warrants it. Never claim real-world physical existence outside this fictional companion simulation.`;
   const input=[...history,{role:"user",content:message}];
   const r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_CHAT_MODEL||"gpt-6-luna",instructions,input,max_output_tokens:500})});
-  const data=await r.json();
-  if(!r.ok)return NextResponse.json({error:data?.error?.message||"Conversation request failed."},{status:r.status});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok){
+   const raw=String(data?.error?.message||"Conversation request failed.");
+   const safe=raw.replace(/sk-[A-Za-z0-9_-]+/g,"[REDACTED]").slice(0,500);
+   const code=String(data?.error?.code||data?.error?.type||"api_error").slice(0,100);
+   return NextResponse.json({error:"OpenAI "+r.status+" · "+code+": "+safe},{status:r.status});
+  }
   const text=data.output_text||data.output?.flatMap((x:any)=>x.content||[]).find((x:any)=>x.type==="output_text")?.text;
   if(!text)return NextResponse.json({error:"No reply returned."},{status:502});
   return NextResponse.json({reply:text});
- }catch(e){console.error("Chat route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"The conversation service failed. Check the server configuration and Vercel logs."},{status:500});}
+ }catch(e){const raw=e instanceof Error?e.message:"Unexpected server error";const safe=raw.replace(/sk-[A-Za-z0-9_-]+/g,"[REDACTED]").slice(0,500);console.error("Chat route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"Server error: "+safe},{status:500});}
 }
