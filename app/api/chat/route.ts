@@ -24,14 +24,32 @@ ${memories.map((m:any)=>"- "+(typeof m==="string"?m:m?.text||"")).join("\n")||"-
 Maintain continuity and have your own opinions. You may disagree gently, tease, change subjects, or mention your simulated day naturally. Avoid customer-service language and excessive questions. Keep normal texts concise. Never claim real-world physical existence outside this fictional companion simulation.`;
   const messages=[{role:"system",content:system},...history,{role:"user",content:message}];
   const model=process.env.CLOUDFLARE_AI_MODEL||"@cf/zai-org/glm-4.7-flash";
-  const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({messages,max_tokens:500,temperature:.8})});
+  const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({messages,max_completion_tokens:500,temperature:.8,stream:false})});
   const data=await r.json().catch(()=>({}));
   if(!r.ok){const raw=String(data?.errors?.[0]?.message||data?.error?.message||"Workers AI request failed.");return NextResponse.json({error:"Cloudflare "+r.status+": "+raw.replace(/Bearer\\s+\\S+/gi,"Bearer [REDACTED]").slice(0,500)},{status:r.status});}
-  const candidate=data?.result?.response ?? data?.response ?? data?.result?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.message?.content;
-  const reply=typeof candidate==="string"?candidate:Array.isArray(candidate)?candidate.map((x:any)=>typeof x==="string"?x:(x?.text||x?.content||"")).join(""):"";
+  const completion=data?.result ?? data;
+  const content=completion?.choices?.[0]?.message?.content;
+  const reply=
+   typeof content==="string" ? content :
+   Array.isArray(content) ? content.map((part:any)=>{
+    if(typeof part==="string")return part;
+    if(typeof part?.text==="string")return part.text;
+    if(typeof part?.content==="string")return part.content;
+    return "";
+   }).join("") :
+   typeof completion?.response==="string" ? completion.response :
+   typeof data?.response==="string" ? data.response : "";
   if(!reply.trim()){
-   console.error("Workers AI empty reply shape",JSON.stringify({top:Object.keys(data||{}),result:data?.result&&typeof data.result==="object"?Object.keys(data.result):typeof data?.result,choice:data?.choices?.[0]?Object.keys(data.choices[0]):null}).slice(0,1000));
-   return NextResponse.json({error:"Cloudflare returned no readable message."},{status:502});
+   const finish=completion?.choices?.[0]?.finish_reason;
+   console.error("Workers AI produced no text",JSON.stringify({
+    success:data?.success,
+    resultType:typeof data?.result,
+    resultKeys:data?.result&&typeof data.result==="object"?Object.keys(data.result):[],
+    choices:Array.isArray(completion?.choices)?completion.choices.length:0,
+    finish:typeof finish==="string"?finish:null,
+    contentType:Array.isArray(content)?"array":typeof content
+   }));
+   return NextResponse.json({error:"Cloudflare completed the request but produced no text. Please retry."},{status:502});
   }
   return NextResponse.json({reply:reply.trim(),provider:"cloudflare",model});
  }catch(e){console.error("Chat route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"Chat server error."},{status:500});}
