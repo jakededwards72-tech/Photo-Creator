@@ -1,3 +1,3 @@
 import "./globals.css";
-export const metadata={title:"Forge AI Studio",description:"AI image creator and editor"};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}
+export const metadata={title:"Evera",description:"Persistent AI companion simulation",manifest:"/manifest.webmanifest",themeColor:"#111014"};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><head><meta name="mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-capable" content="yes"/></head><body>{children}</body></html>}
