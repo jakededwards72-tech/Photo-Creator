@@ -23,7 +23,7 @@ Memories:
 ${memories.map((m:any)=>"- "+(typeof m==="string"?m:m?.text||"")).join("\n")||"- None yet."}
 Maintain continuity and have your own opinions. You may disagree gently, tease, change subjects, or mention your simulated day naturally. Avoid customer-service language and excessive questions. Keep normal texts concise. Never claim real-world physical existence outside this fictional companion simulation.`;
   const messages=[{role:"system",content:system},...history,{role:"user",content:message}];
-  const model=process.env.CLOUDFLARE_AI_MODEL||"@cf/meta/llama-3.1-8b-instruct";
+  const model=process.env.CLOUDFLARE_AI_MODEL||"@cf/zai-org/glm-4.7-flash";
   const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/v1/chat/completions`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({model,messages,max_tokens:500,temperature:.8})});
   const data=await r.json().catch(()=>({}));
   if(!r.ok){const raw=String(data?.errors?.[0]?.message||data?.error?.message||"Workers AI request failed.");return NextResponse.json({error:"Cloudflare "+r.status+": "+raw.replace(/Bearer\\s+\\S+/gi,"Bearer [REDACTED]").slice(0,500)},{status:r.status});}
