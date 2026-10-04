@@ -19,5 +19,5 @@ export async function POST(req:Request){
   const data=await res.json(); if(!res.ok) return NextResponse.json({error:data?.error?.message||"Image request failed."},{status:res.status});
   const b64=data?.data?.[0]?.b64_json; const url=data?.data?.[0]?.url; if(!b64&&!url) return NextResponse.json({error:"No image returned."},{status:502});
   return NextResponse.json({image:b64?`data:image/png;base64,${b64}`:url});
- }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Unexpected error"},{status:500});}
+ }catch(e){console.error("Image route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"The image service failed. Check the server configuration and Vercel logs."},{status:500});}
 }
