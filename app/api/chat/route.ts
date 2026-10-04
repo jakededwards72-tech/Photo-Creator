@@ -45,5 +45,5 @@ Behavior rules: Treat the simulation state as fact. Maintain continuity. Have op
   const text=data.output_text||data.output?.flatMap((x:any)=>x.content||[]).find((x:any)=>x.type==="output_text")?.text;
   if(!text)return NextResponse.json({error:"No reply returned."},{status:502});
   return NextResponse.json({reply:text});
- }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Unexpected error"},{status:500});}
+ }catch(e){console.error("Chat route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"The conversation service failed. Check the server configuration and Vercel logs."},{status:500});}
 }
