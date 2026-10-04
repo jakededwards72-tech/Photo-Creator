@@ -27,8 +27,12 @@ Maintain continuity and have your own opinions. You may disagree gently, tease, 
   const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/v1/chat/completions`,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({model,messages,max_tokens:500,temperature:.8})});
   const data=await r.json().catch(()=>({}));
   if(!r.ok){const raw=String(data?.errors?.[0]?.message||data?.error?.message||"Workers AI request failed.");return NextResponse.json({error:"Cloudflare "+r.status+": "+raw.replace(/Bearer\\s+\\S+/gi,"Bearer [REDACTED]").slice(0,500)},{status:r.status});}
-  const reply=data?.choices?.[0]?.message?.content||data?.result?.response;
-  if(typeof reply!=="string"||!reply.trim())return NextResponse.json({error:"Cloudflare returned no reply."},{status:502});
+  const candidate=data?.choices?.[0]?.message?.content ?? data?.result?.choices?.[0]?.message?.content ?? data?.result?.response ?? data?.response;
+  const reply=typeof candidate==="string"?candidate:Array.isArray(candidate)?candidate.map((x:any)=>typeof x==="string"?x:(x?.text||x?.content||"")).join(""):"";
+  if(!reply.trim()){
+   console.error("Workers AI empty reply shape",JSON.stringify({top:Object.keys(data||{}),result:data?.result&&typeof data.result==="object"?Object.keys(data.result):typeof data?.result,choice:data?.choices?.[0]?Object.keys(data.choices[0]):null}).slice(0,1000));
+   return NextResponse.json({error:"Cloudflare returned no readable message."},{status:502});
+  }
   return NextResponse.json({reply:reply.trim(),provider:"cloudflare",model});
  }catch(e){console.error("Chat route failed",e instanceof Error?e.name:"Unknown error");return NextResponse.json({error:"Chat server error."},{status:500});}
 }
